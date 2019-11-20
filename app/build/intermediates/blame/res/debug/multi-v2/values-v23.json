@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "C:\\Users\\johan\\AndroidStudioProjects\\ITSHack\\app\\build\\intermediates\\incremental\\mergeDebugResources\\merged.dir\\values-v23\\values-v23.xml",
+            "outputFile": "/Users/andjojo/Documents/Development/G.E.R.D.A./GerdaAndroid/app/build/intermediates/incremental/mergeDebugResources/merged.dir/values-v23/values-v23.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\johan\\.gradle\\caches\\transforms-2\\files-2.1\\d25bf5bfad142820d7ae3cf0cf340e78\\res\\values-v23\\values-v23.xml",
+                    "source": "/Users/andjojo/.gradle/caches/transforms-2/files-2.1/dbd987ed33b15aad892c6d43c3593b25/res/values-v23/values-v23.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,20,34,35,36,37,41,42,43,44",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4",

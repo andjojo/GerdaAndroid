@@ -1,11 +1,11 @@
 #Internal package file, do not edit.
-#Sat Oct 26 15:36:52 CEST 2019
-1.base=C\:\\Users\\johan\\AndroidStudioProjects\\ITSHack\\app\\build\\intermediates\\transforms\\dexMerger\\debug\\1
+#Sat Nov 16 15:50:48 CET 2019
+1.base=/Users/andjojo/Documents/Development/G.E.R.D.A./GerdaAndroid/app/build/intermediates/transforms/dexMerger/debug/0
 0.baseType=DIRECTORY
 1.baseType=DIRECTORY
 count=2
 1.set=DEX
 0.path=classes.dex
 0.set=DEX
-0.base=C\:\\Users\\johan\\AndroidStudioProjects\\ITSHack\\app\\build\\intermediates\\transforms\\dexMerger\\debug\\0
+0.base=/Users/andjojo/Documents/Development/G.E.R.D.A./GerdaAndroid/app/build/intermediates/transforms/dexMerger/debug/1
 1.path=classes.dex

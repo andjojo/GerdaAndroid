@@ -75,14 +75,9 @@ public class MainActivity extends AppCompatActivity {
     ScrollView scrollView;
     boolean onBoard=false;
     long nextEventinMillis;
-    String lat_start="53.551085";
-    String lon_start="9.993682";
-    String lat_dest="48.784084";
-    String lon_dest="9.181635";
     double lat_target,lon_target;
     double distance=0;
-    String starttime="2019-11-02T17%3A19%3A23Z";
-    String resturl = "fromLatitude="+lat_start+"&fromLongitude="+lon_start+"&provider=INNO&routingProvider=HERE&startTime="+starttime+"&toLatitude="+lat_dest+"&toLongitude="+lon_dest;
+    IMapController mapController;
 
     int listenmode=0;
 
@@ -116,14 +111,13 @@ public class MainActivity extends AppCompatActivity {
         //map.getMapOverlay().setColorFilter(myColorFilter);
         map.setBuiltInZoomControls(false);
         map.setMultiTouchControls(true);
-        IMapController mapController = map.getController();
+        mapController = map.getController();
         mapController.setZoom(16);
-        GeoPoint startPoint = new GeoPoint(53.551085, 9.993682);
-        mapController.setCenter(startPoint);
-        ArrayList<OverlayItem> items = new ArrayList<OverlayItem>();
+        //GeoPoint startPoint = new GeoPoint(53.551085, 9.993682);
+        //mapController.setCenter(startPoint);
+
         locationManager = (LocationManager)
                 getSystemService(Context.LOCATION_SERVICE);
-        //https://openrouteservice.org/
 
 
         textViewZeit=(TextView) findViewById(R.id.textViewZeit);
@@ -131,21 +125,18 @@ public class MainActivity extends AppCompatActivity {
         scrollView=(ScrollView) findViewById(R.id.scrollView);
 
 
+        URL url = null;
+        try {
+            url = new URL("http://3.84.55.152:5001/api/get_next_step/user_id=oma_erna,track_id=1234,current_step=0");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        new DownloadFilesTask(url,handlePHPResult).execute("");
 
-        Marker m = new Marker(map);
-        m.setPosition(startPoint);
-        m.setTextLabelBackgroundColor(
-                Color.TRANSPARENT
-        );
-        m.setTextLabelForegroundColor(
-                Color.RED
-        );
-        m.setTextLabelFontSize(40);
-        m.setIcon(getDrawable(R.drawable.marker));
-        m.setImage(getDrawable(R.drawable.marker));
-        //m.setTextIcon("text");
-        m.setAnchor(0.19f, 0.33f);
-        map.getOverlays().add(m);
+
+
+
+
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location loc) {
@@ -219,24 +210,14 @@ public class MainActivity extends AppCompatActivity {
             // Permission has already been granted
         }
 
-
-
-        URL url = null;
+        /*URL url = null;
         try {
-            url = new URL("https://innoapi-k8s01-dev-fcd.reisenden.info/2.7/routing/trip?"+resturl);
-            //url = new URL("https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248dda1eabd45b145d09618ac19a99f42c3&start=8.681495,49.41461&end=9.993682,53.551085");
+            url = new URL(GerdaVars.getURL()+"check_state/"+GerdaVars.getUserId()+","+GerdaVars.getTrackId());
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
-        new DownloadFilesTask(url,handlePHPResult).execute("");
-        url = null;
-        try {
-            url = new URL("http://10.1.141.165:5000/new_trip/"+lat_start+","+lon_start+","+lat_dest+","+lon_dest+","+starttime);
-            //url = new URL("https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248dda1eabd45b145d09618ac19a99f42c3&start=8.681495,49.41461&end=9.993682,53.551085");
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        new DownloadFilesTask(url,handlePHPResult).execute("");
+        new DownloadFilesTask(url,handlePHPResult).execute("");*/
+
 
     }
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
@@ -395,6 +376,7 @@ public class MainActivity extends AppCompatActivity {
         });
         scrollView.fullScroll(View.FOCUS_DOWN);
     }
+
     public void addUserSpeechBubble(String text){
         final View view = LayoutInflater.from(getApplicationContext()).inflate(R.layout.speech_bubble_user, frend, false);
         frend.addView(view);
@@ -403,6 +385,7 @@ public class MainActivity extends AppCompatActivity {
         tv.setText(text);
         scrollView.fullScroll(View.FOCUS_DOWN);
     }
+
     public double degreesToRadians(double degrees) {
         return degrees * Math.PI / 180;
     }
@@ -423,109 +406,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public HandlePHPResult handlePHPResult=(s, url)->{
-        if (url.toString().contains("journeyID")) {
-            JSONObject myjson = null;
-            try {
-                myjson = new JSONObject(s);
-            } catch (JSONException e) {
-                e.printStackTrace();
+        if (url.toString().contains("get_next_step")){
+            JSONObject jsonObject = new JSONObject(s);
+            Step currentStep = new Step(jsonObject);
+            for (int i =0;i<currentStep.getLats().length;i++){
+                GeoPoint geoPoint = new GeoPoint(currentStep.getLats()[i],currentStep.getLons()[i]);
+                if (i==0)mapController.setCenter(geoPoint);
+                newMarker(geoPoint);
             }
-            String type = HandleJson.getTransportType(currentTrip, currentTripNum);
-            List<GeoPoint> geoPoints = HandleJson.getPolyline(currentTrip,currentTripNum);
-            lat_target=geoPoints.get(geoPoints.size()-1).getLatitude();
-            lon_target=geoPoints.get(geoPoints.size()-1).getLongitude();
-            if (!type.equals("WALK")) {
-                if (!onBoard) {
-                    JSONArray segments = HandleJson.getSegments(myjson);
-                    int time = HandleJson.getDepartureTime(segments, 0);
-                    nextEventinMillis = System.currentTimeMillis()+time*1000;
-                    textViewZeit.setText(time / 60 + " MIN");
-                    textViewExtra.setText("GLEIS " + HandleJson.getTrack(segments, 0));
-                    addGerdaSpeechBubble("Toll gemacht! Als nächstes nimmst du den " + HandleJson.getTrain(segments, 0) + " in " + time / 60 + " Minuten von Gleis " + HandleJson.getTrack(segments, 0));
-                }
-                else{
-                    JSONArray segments = HandleJson.getSegments(myjson);
-                    int time = HandleJson.getArrivalTime(segments, segments.length()-1);
-                    nextEventinMillis = System.currentTimeMillis()+time*1000;
-                    textViewZeit.setText(time / 60 + " MIN");
-                    textViewExtra.setText("PÜNKTLICH");
-                    addGerdaSpeechBubble("Super! Dann wünsche ich eine gute Fahrt. Du kannst jetzt für " + time / 60/60 + " Stunden entspannen. Ich informiere dich wenn etwas Unvorhergesehenes passieren sollte.");
-                    makeBoardingRequest();
-
-                }
-            }
-            else{
-                if (onBoard==true){
-                    makeLeavingRequest();
-                }
-                onBoard=false;
-                addGerdaSpeechBubble("Folge der Karte zum nächsten Ziel.");
-                if(!myjson.toString().equals("{\"journey\":null}")) {
-                    JSONArray segments = HandleJson.getSegments(myjson);
-                    int time = HandleJson.getDepartureTime(segments, 0);
-                    nextEventinMillis = System.currentTimeMillis() + time * 1000;
-                    textViewZeit.setText(time / 60 + " MIN");
-                    textViewExtra.setText("LAUFEN");
-                }
-                }
-            }
-        else if (url.toString().contains("innoapi")||(url.toString().contains("get_update")&&!s.equals("0,0"))) {
-            currentTripNum=0;
-            map.getOverlayManager().clear();
-            JSONObject myjson = null;
-            try {
-                myjson = new JSONObject(s);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            JSONArray trip = HandleJson.getTrip(myjson);
-            currentTrip = trip;
-            for (int i = 0; i < HandleJson.getNumberOfLegs(trip); i++) {
-                List<GeoPoint> geoPoints = HandleJson.getPolyline(trip, i);
-                Polyline line = new Polyline();   //see note below!
-                line.setPoints(geoPoints);
-                String journeyNum = HandleJson.getJourneyNum(trip,i);
-                line.setOnClickListener(new Polyline.OnClickListener() {
-                    @Override
-                    public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
-                        Toast.makeText(mapView.getContext(), "polyline with " + polyline.getPoints().size() + "pts was tapped", Toast.LENGTH_LONG).show();
-                        return false;
-                    }
-                });
-                line.setColor(HandleJson.getColorFromTrip(trip, i));
-                IMapController mapController = map.getController();
-                map.getOverlayManager().add(line);
-                newMarker(geoPoints.get(0));
-                newMarker(geoPoints.get(geoPoints.size() - 1));
-
-            }
-            whattodo();
-
-        }
-        else if(url.toString().contains("dialog")){
-            addGerdaSpeechBubble(s);
         }
     };
-    public void makeLeavingRequest(){
-        URL url = null;
-        try {
-            url = new URL("http://10.1.141.165:5000/detach_user_from_journy/oma_erna,"+HandleJson.getJourneyNum(currentTrip,currentTripNum));
-            //url = new URL("https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248dda1eabd45b145d09618ac19a99f42c3&start=8.681495,49.41461&end=9.993682,53.551085");
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        new DownloadFilesTask(url,handlePHPResult).execute("");
-    }
-    public void makeBoardingRequest(){
-        URL url = null;
-        try {
-            url = new URL("http://10.1.141.165:5000/add_user_to_journy/oma_erna,"+HandleJson.getJourneyNum(currentTrip,currentTripNum));
-            //url = new URL("https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248dda1eabd45b145d09618ac19a99f42c3&start=8.681495,49.41461&end=9.993682,53.551085");
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        new DownloadFilesTask(url,handlePHPResult).execute("");
-    }
 
     public void newMarker(GeoPoint point){
         Marker m = new Marker(map);

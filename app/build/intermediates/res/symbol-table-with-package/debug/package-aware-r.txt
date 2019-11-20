@@ -772,6 +772,7 @@ id bubble_image
 id bubble_moreinfo
 id bubble_subdescription
 id bubble_title
+id button
 id button1
 id button2
 id buttonPanel
@@ -792,6 +793,8 @@ id dialog_button
 id dimensions
 id direct
 id disableHome
+id editText
+id editText2
 id edit_query
 id end
 id expand_activities_button
@@ -806,7 +809,6 @@ id icon
 id icon_group
 id ifRoom
 id image
-id imageView
 id imageView2
 id info
 id invisible
@@ -828,6 +830,7 @@ id notification_main_column
 id notification_main_column_container
 id off
 id on
+id overview
 id packed
 id parent
 id parentPanel
@@ -882,6 +885,7 @@ id text
 id text2
 id textSpacerNoButtons
 id textSpacerNoTitle
+id textView
 id textView6
 id textView7
 id textViewExtra
@@ -940,6 +944,7 @@ layout abc_search_view
 layout abc_select_dialog_material
 layout abc_tooltip
 layout activity_main
+layout activity_overview
 layout activity_text
 layout bonuspack_bubble
 layout current_state

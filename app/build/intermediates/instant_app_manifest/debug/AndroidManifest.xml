@@ -41,8 +41,11 @@
         android:label="GERDA"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
+        android:testOnly="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true" >
+        <activity android:name="com.andjojo.itshack.OverviewActivity" />
+
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />
@@ -57,8 +60,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="com.andjojo.itshack.MainActivity" >
-        </activity>
+        <activity android:name="com.andjojo.itshack.MainActivity" />
     </application>
 
 </manifest>

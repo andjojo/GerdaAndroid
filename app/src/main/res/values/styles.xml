@@ -7,7 +7,7 @@
         <item name="windowNoTitle">true</item>
         <item name="colorPrimary">#777777</item>
         <item name="colorPrimaryDark">#aaaaaa</item>
-        <item name="colorAccent">#aaffaa</item>
+        <item name="colorAccent">#000000</item>
     </style>
 
 </resources>

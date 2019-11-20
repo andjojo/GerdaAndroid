@@ -10,6 +10,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.json.JSONException;
 
 import java.io.IOException;
 import java.net.URL;
@@ -64,7 +65,11 @@ public class DownloadFilesTask extends AsyncTask<String, Void, String> {
     @Override
     protected void onPostExecute(String result) {
         if (s!=null) {
-            handlePHPResult.handle(s,url);
+            try {
+                handlePHPResult.handle(s,url);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
         else{
         }

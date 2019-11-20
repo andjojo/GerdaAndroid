@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "C:\\Users\\johan\\AndroidStudioProjects\\ITSHack\\app\\build\\intermediates\\incremental\\mergeDebugResources\\merged.dir\\values-ml\\values-ml.xml",
+            "outputFile": "/Users/andjojo/Documents/Development/G.E.R.D.A./GerdaAndroid/app/build/intermediates/incremental/mergeDebugResources/merged.dir/values-ml/values-ml.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\johan\\.gradle\\caches\\transforms-2\\files-2.1\\d25bf5bfad142820d7ae3cf0cf340e78\\res\\values-ml\\values-ml.xml",
+                    "source": "/Users/andjojo/.gradle/caches/transforms-2/files-2.1/dbd987ed33b15aad892c6d43c3593b25/res/values-ml/values-ml.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -14,7 +14,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\johan\\.gradle\\caches\\transforms-2\\files-2.1\\f6e9090318709a6500f99eb65fc87207\\res\\values-ml\\values-ml.xml",
+                    "source": "/Users/andjojo/.gradle/caches/transforms-2/files-2.1/39e9140d7113bd51b0dc51aea954a8d4/res/values-ml/values-ml.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
