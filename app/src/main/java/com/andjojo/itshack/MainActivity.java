@@ -5,16 +5,19 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -23,13 +26,14 @@ import android.speech.tts.Voice;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.andjojo.itshack.WebAPI.DownloadFilesTask;
 import com.andjojo.itshack.WebAPI.HandlePHPResult;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
@@ -42,6 +46,7 @@ import org.osmdroid.views.overlay.Polyline;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -55,14 +60,23 @@ public class MainActivity extends AppCompatActivity {
     Location currentLoc;
     ViewGroup frend;
     private static int USER_QUESTION = 0;
+    private static int USER_ANSWER = 1;
     TextView textViewZeit;
     TextView textViewExtra;
     ScrollView scrollView;
     IMapController mapController;
+    RideCanvas rideCanvas;
+    Step currentStep;
+    int stepNumber=-1;
+    GeoPointListener geoPointListener;
+    String currentInteractionId = "";
+    Marker myMarker;
+    MainActivity self;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        self = this;
 
         //handle permissions first, before map is created. not depicted here
 
@@ -93,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
         map.setMultiTouchControls(true);
         mapController = map.getController();
         mapController.setZoom(16);
+        myMarker = new Marker(map);
         //GeoPoint startPoint = new GeoPoint(53.551085, 9.993682);
         //mapController.setCenter(startPoint);
 
@@ -105,24 +120,37 @@ public class MainActivity extends AppCompatActivity {
         scrollView = (ScrollView) findViewById(R.id.scrollView);
 
 
-        URL url = null;
-        try {
-            url = new URL("http://3.84.55.152:5001/api/get_next_step/user_id=oma_erna,track_id=1234,current_step=0");
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        new DownloadFilesTask(url, handlePHPResult).execute("");
+        nextStep();
+        startUpdateTimer();
 
         addGerdaSpeechBubble("Hallo. Ich bin G.E.R.D.A. deine Begleitung auf der heutigen Fahrt. Ich hoffe du freust dich schon auf unsere Reise. Wenn du Fragen hast dann drücke den Knopf und schieß los!");
 
 
         locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(Location loc) {
+            @Override public void onLocationChanged(Location loc) {
+                GeoPoint point = new GeoPoint(loc.getLatitude(), loc.getLongitude());
+                myMarker.setPosition(point);
+                myMarker.setTextLabelBackgroundColor(
+                        Color.TRANSPARENT
+                );
+                myMarker.setTextLabelForegroundColor(
+                        Color.RED
+                );
+                myMarker.setTextLabelFontSize(40);
+                myMarker.setIcon(getDrawable(R.drawable.smile));
+                myMarker.setImage(getDrawable(R.drawable.smile));
+                //m.setTextIcon("text");
+                myMarker.setAnchor(0.19f, 0.33f);
+                map.getOverlays().add(myMarker);
+                map.invalidate();
+
+
                 currentLoc = loc;
                 GeoPoint geoPoint = new GeoPoint(loc.getLatitude(), loc.getLongitude());
-                mapController.setZoom(16);
                 mapController.setCenter(geoPoint);
+                rideCanvas.setUserPos(currentStep.getPercentageOnRoute((float) loc.getLatitude(),(float) loc.getLongitude(), self));
+                if(geoPointListener!=null)geoPointListener.listen(loc.getLatitude(),loc.getLongitude());
+                updateLocation(loc.getLatitude(),loc.getLongitude());
             }
 
             @Override
@@ -166,7 +194,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-
+        rideCanvas = (RideCanvas) findViewById(R.id.ride);
+        rideCanvas.draw();
 
     }
 
@@ -186,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
                         // for ActivityCompat#requestPermissions for more details.
                         return;
                     }
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
 
                 } else {
                     // permission denied, boo! Disable the
@@ -245,9 +274,10 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
                 getApplicationContext().getPackageName());
-
+        ImageButton btn = (ImageButton) findViewById(R.id.button1);
+        btn.setBackgroundResource(R.drawable.layout_bg_yellow_blue);
         // Add custom listeners.
-        CustomRecognitionListener listener = new CustomRecognitionListener(this);
+        CustomRecognitionListener listener = new CustomRecognitionListener(this,currentInteractionId,btn);
         SpeechRecognizer sr = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
         sr.setRecognitionListener(listener);
         sr.startListening(intent);
@@ -276,16 +306,22 @@ public class MainActivity extends AppCompatActivity {
         ViewGroup vg = (ViewGroup) (frend.getChildAt(frend.getChildCount() - 1));
         TextView tv = (TextView) vg.getChildAt(0);
         tv.setText(text);
-
-        textToSpeechSystem = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
-            @Override
-            public void onInit(int status) {
-                if (status == TextToSpeech.SUCCESS) {
-                    textToSpeechSystem.speak(text, TextToSpeech.QUEUE_ADD, null);
-
+            textToSpeechSystem = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+                @Override
+                public void onInit(int status) {
+                    if (status == TextToSpeech.SUCCESS) {
+                        //Set<Voice> voiceSet = textToSpeechSystem.getVoices();
+                        //Voice voice=null;
+                        Set<String> a = new HashSet<>();
+                        a.add("male");
+                        Voice v = new Voice("de-ger-x-sfg#male_2-local", new Locale("de", "DE"), 500, 200, true, a);
+                        List<TextToSpeech.EngineInfo> e = textToSpeechSystem.getEngines();
+                        textToSpeechSystem.setSpeechRate(0.9f);
+                        if(!GerdaVars.isDebug())textToSpeechSystem.speak(text, TextToSpeech.QUEUE_ADD, null);
+                    }
                 }
-            }
-        });
+
+            });
         scrollView.fullScroll(View.FOCUS_DOWN);
     }
 
@@ -298,11 +334,11 @@ public class MainActivity extends AppCompatActivity {
         scrollView.fullScroll(View.FOCUS_DOWN);
     }
 
-    public double degreesToRadians(double degrees) {
+    public static double degreesToRadians(double degrees) {
         return degrees * Math.PI / 180;
     }
 
-    public double distanceInKmBetweenEarthCoordinates(double lat1, double lon1, double lat2, double lon2) {
+    public static double distanceInKmBetweenEarthCoordinates(double lat1, double lon1, double lat2, double lon2) {
         double earthRadiusKm = 6371;
 
         double dLat = degreesToRadians(lat2 - lat1);
@@ -318,15 +354,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public HandlePHPResult handlePHPResult = (s, url) -> {
+        if (GerdaVars.isDebug()) addGerdaSpeechBubble(url.toString());
+
         if (url.toString().contains("get_next_step")) {
             JSONObject jsonObject = new JSONObject(s);
-            Step currentStep = new Step(jsonObject);
-            for (int i = 0; i < currentStep.getLats().length; i++) {
-                GeoPoint geoPoint = new GeoPoint(currentStep.getLats()[i], currentStep.getLons()[i]);
-                if (i == 0) mapController.setCenter(geoPoint);
-                newMarker(geoPoint);
-            }
+            currentStep = new Step(jsonObject);
+                for (int i = 0; i < currentStep.getStationLats().length; i++) {
+                    GeoPoint geoPoint = new GeoPoint(currentStep.getStationLats()[i], currentStep.getStationLons()[i]);
+                    if (i == 0) mapController.setCenter(geoPoint);
+                    newMarker(geoPoint);
+                    rideCanvas.setStep(currentStep);
+                    rideCanvas.invalidate();
+                }
+                if (currentStep.getTransportType().equals("Laufen")){
+                    this.addGerdaSpeechBubble(currentStep.getCurrentInstruction(0));
+                    geoPointListener = new GeoPointListener(this,currentStep);
+                }
+                else{
+                    geoPointListener = null;
+                }
+
             newPolyline(currentStep.getLats(), currentStep.getLons());
+        }
+        else if (url.toString().contains("check_state")){
+            JSONObject jsonObject = new JSONObject(s);
+            Boolean isInteraction = jsonObject.getBoolean("is_interaction");
+            currentInteractionId = jsonObject.getString("interaction_id");
+            if (isInteraction){
+                addGerdaSpeechBubble(jsonObject.getString("interaction_text"));
+                Handler handler = new Handler();
+                int delay = 5000; //milliseconds
+
+                handler.postDelayed(new Runnable(){
+                    public void run(){
+                        listen(USER_ANSWER);
+                    }
+                }, delay);
+            }
+        }
+        else if (url.toString().contains("gerda_interaction")){
+            JSONObject jsonObject = new JSONObject(s);
+            Boolean isInteraction = jsonObject.getBoolean("is_interaction");
+            currentInteractionId = jsonObject.getString("interaction_id");
+            if (isInteraction){
+                addGerdaSpeechBubble(jsonObject.getString("text"));
+                Handler handler = new Handler();
+                int delay = 5000; //milliseconds
+
+                handler.postDelayed(new Runnable(){
+                    public void run(){
+                        listen(USER_ANSWER);
+                    }
+                }, delay);
+            }
         }
     };
 
@@ -360,6 +440,39 @@ public class MainActivity extends AppCompatActivity {
         m.setAnchor(0.19f, 0.33f);
         map.getOverlays().add(m);
         map.invalidate();
+    }
+
+    public void startUpdateTimer(){
+        Handler handler = new Handler();
+        int delay = 10000; //milliseconds
+
+        handler.postDelayed(new Runnable(){
+            public void run(){
+                //do something
+                handler.postDelayed(this, delay);
+            }
+        }, delay);
+    }
+
+    public void updateLocation(double lat, double lon){
+        URL url = null;
+        try {
+            url = new URL("http://3.84.55.152:5001/api/check_state/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",lat="+lat+",lon="+lon+",current_step="+stepNumber);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        new DownloadFilesTask(url, handlePHPResult).execute("");
+    }
+
+    public void nextStep(){
+        URL url = null;
+        try {
+            url = new URL("http://3.84.55.152:5001/api/get_next_step/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+stepNumber);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        new DownloadFilesTask(url, handlePHPResult).execute("");
+        stepNumber++;
     }
 
 }

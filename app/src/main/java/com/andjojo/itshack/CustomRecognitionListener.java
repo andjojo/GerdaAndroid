@@ -6,15 +6,26 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.ImageButton;
 
+import com.andjojo.itshack.WebAPI.DownloadFilesTask;
+
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 
     class CustomRecognitionListener implements RecognitionListener {
         private static final String TAG = "RecognitionListener";
         private MainActivity activity;
+        private String interactionID;
+        private ImageButton btn;
 
-        public CustomRecognitionListener(MainActivity activity){
+
+        public CustomRecognitionListener(MainActivity activity, String interactionID, ImageButton btn){
             this.activity=activity;
+            this.interactionID=interactionID;
+            this.btn = btn;
         }
 
         public void onReadyForSpeech(Bundle params) {
@@ -35,20 +46,27 @@ import java.util.ArrayList;
 
         public void onEndOfSpeech() {
             Log.d(TAG, "onEndofSpeech");
+            btn.setBackgroundResource(R.drawable.layout_bg_yellow);
         }
 
         public void onError(int error) {
             Log.e(TAG, "error " + error);
-
         }
 
         public void onResults(Bundle results) {
             Log.e(TAG, results.toString());
             ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
             String text = "";
-            for (String result : matches)
-                text += result + "\n";
+            text += matches.get(0);
+            text = text.replace(" ","_");
             activity.addUserSpeechBubble(text);
+            URL url = null;
+            try {
+                url = new URL("http://3.84.55.152:5001/api/gerda_interaction/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+activity.stepNumber+",interaction_id="+interactionID+",text="+text);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            new DownloadFilesTask(url, activity.handlePHPResult).execute("");
         }
 
         public void onPartialResults(Bundle partialResults) {

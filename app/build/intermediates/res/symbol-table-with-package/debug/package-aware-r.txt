@@ -666,6 +666,7 @@ drawable ic_menu_offline
 drawable layout_bg_blue
 drawable layout_bg_light_yellow
 drawable layout_bg_yellow
+drawable layout_bg_yellow_blue
 drawable logo
 drawable marker
 drawable marker_default
@@ -697,6 +698,7 @@ drawable round_navigation_white_48
 drawable scan
 drawable sharp_add_black_36
 drawable sharp_remove_black_36
+drawable smile
 drawable tooltip_frame_dark
 drawable tooltip_frame_light
 drawable zoom_in
@@ -838,6 +840,7 @@ id percent
 id progress_circular
 id progress_horizontal
 id radio
+id ride
 id right
 id right_icon
 id right_side
@@ -872,6 +875,8 @@ id standard
 id start
 id submenuarrow
 id submit_area
+id switch1
+id switch2
 id tabMode
 id tag_accessibility_actions
 id tag_accessibility_clickable_spans

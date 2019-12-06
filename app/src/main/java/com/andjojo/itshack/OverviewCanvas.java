@@ -50,7 +50,7 @@ public class OverviewCanvas extends View {
     public void onDraw(Canvas canvas){
         super.onDraw(canvas);
         Paint paint = new Paint();
-        paint.setColor(Color.BLACK);
+        paint.setColor(Color.rgb(34,68,89));
         paint.setTextSize(40);
         paint.setStrokeWidth(3);
         paint.setAntiAlias(true);
