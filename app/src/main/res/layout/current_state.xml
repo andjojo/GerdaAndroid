@@ -18,7 +18,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center|center_horizontal"
-            android:onClick="onFakeReach"
+            android:onClick="onFake"
             android:text="Lädt..."
             android:textColor="#224459"
             android:textSize="30sp" />
@@ -29,7 +29,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center|center_horizontal"
-            android:onClick="onFakeBoarding"
             android:text="Lädt..."
             android:textSize="30sp" />
     </LinearLayout>

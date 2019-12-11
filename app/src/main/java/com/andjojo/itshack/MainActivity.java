@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
     String currentInteractionId = "";
     Marker myMarker;
     MainActivity self;
+    boolean debugLoc = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -128,29 +129,7 @@ public class MainActivity extends AppCompatActivity {
 
         locationListener = new LocationListener() {
             @Override public void onLocationChanged(Location loc) {
-                GeoPoint point = new GeoPoint(loc.getLatitude(), loc.getLongitude());
-                myMarker.setPosition(point);
-                myMarker.setTextLabelBackgroundColor(
-                        Color.TRANSPARENT
-                );
-                myMarker.setTextLabelForegroundColor(
-                        Color.RED
-                );
-                myMarker.setTextLabelFontSize(40);
-                myMarker.setIcon(getDrawable(R.drawable.smile));
-                myMarker.setImage(getDrawable(R.drawable.smile));
-                //m.setTextIcon("text");
-                myMarker.setAnchor(0.19f, 0.33f);
-                map.getOverlays().add(myMarker);
-                map.invalidate();
-
-
-                currentLoc = loc;
-                GeoPoint geoPoint = new GeoPoint(loc.getLatitude(), loc.getLongitude());
-                mapController.setCenter(geoPoint);
-                rideCanvas.setUserPos(currentStep.getPercentageOnRoute((float) loc.getLatitude(),(float) loc.getLongitude(), self));
-                if(geoPointListener!=null)geoPointListener.listen(loc.getLatitude(),loc.getLongitude());
-                updateLocation(loc.getLatitude(),loc.getLongitude());
+                if (!debugLoc)changeLocationAction(loc.getLatitude(),loc.getLongitude());
             }
 
             @Override
@@ -334,6 +313,13 @@ public class MainActivity extends AppCompatActivity {
         scrollView.fullScroll(View.FOCUS_DOWN);
     }
 
+    public void onFake(View v){
+        if (GerdaVars.isDebug()){
+            changeLocationAction(currentStep.getNextStationLat(),currentStep.getNextStationLon());
+            debugLoc = true;
+        }
+    }
+
     public static double degreesToRadians(double degrees) {
         return degrees * Math.PI / 180;
     }
@@ -354,59 +340,65 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public HandlePHPResult handlePHPResult = (s, url) -> {
-        if (GerdaVars.isDebug()) addGerdaSpeechBubble(url.toString());
+        if (GerdaVars.isDebug()) addGerdaSpeechBubble(url.toString()+"\n \n"+s);
 
         if (url.toString().contains("get_next_step")) {
             JSONObject jsonObject = new JSONObject(s);
             currentStep = new Step(jsonObject);
-                for (int i = 0; i < currentStep.getStationLats().length; i++) {
-                    GeoPoint geoPoint = new GeoPoint(currentStep.getStationLats()[i], currentStep.getStationLons()[i]);
-                    if (i == 0) mapController.setCenter(geoPoint);
-                    newMarker(geoPoint);
-                    rideCanvas.setStep(currentStep);
-                    rideCanvas.invalidate();
-                }
-                if (currentStep.getTransportType().equals("Laufen")){
-                    this.addGerdaSpeechBubble(currentStep.getCurrentInstruction(0));
-                    geoPointListener = new GeoPointListener(this,currentStep);
-                }
-                else{
-                    geoPointListener = null;
-                }
+                if (!currentStep.getTransportType().equals("Umstieg")) {
+                    for (int i = 0; i < currentStep.getStationLats().length; i++) {
+                        GeoPoint geoPoint = new GeoPoint(currentStep.getStationLats()[i], currentStep.getStationLons()[i]);
+                        if (i == 0) mapController.setCenter(geoPoint);
+                        newMarker(geoPoint);
+                        rideCanvas.setStep(currentStep);
+                        rideCanvas.invalidate();
+                    }
+                    if (currentStep.getTransportType().equals("Laufen")) {
+                        this.addGerdaSpeechBubble(currentStep.getCurrentInstruction(0));
+                        geoPointListener = new GeoPointListener(this, currentStep);
+                    } else {
+                        geoPointListener = null;
+                    }
 
             newPolyline(currentStep.getLats(), currentStep.getLons());
+                }
+                else {
+                    //TODO: ADD code for Umstieg
+                    nextStep();
+                }
         }
         else if (url.toString().contains("check_state")){
             JSONObject jsonObject = new JSONObject(s);
             Boolean isInteraction = jsonObject.getBoolean("is_interaction");
-            currentInteractionId = jsonObject.getString("interaction_id");
-            if (isInteraction){
-                addGerdaSpeechBubble(jsonObject.getString("interaction_text"));
-                Handler handler = new Handler();
-                int delay = 5000; //milliseconds
+            if (!currentInteractionId.equals(jsonObject.getString("interaction_id"))) {
+                currentInteractionId = jsonObject.getString("interaction_id");
+                if (isInteraction) {
+                    addGerdaSpeechBubble(jsonObject.getString("interaction_text"));
+                    Handler handler = new Handler();
+                    int delay = 5000; //milliseconds
 
-                handler.postDelayed(new Runnable(){
-                    public void run(){
-                        listen(USER_ANSWER);
-                    }
-                }, delay);
+                    handler.postDelayed(new Runnable() {
+                        public void run() {
+                            listen(USER_ANSWER);
+                        }
+                    }, delay);
+                }
             }
         }
         else if (url.toString().contains("gerda_interaction")){
             JSONObject jsonObject = new JSONObject(s);
-            Boolean isInteraction = jsonObject.getBoolean("is_interaction");
             currentInteractionId = jsonObject.getString("interaction_id");
-            if (isInteraction){
-                addGerdaSpeechBubble(jsonObject.getString("text"));
-                Handler handler = new Handler();
-                int delay = 5000; //milliseconds
+            if (currentInteractionId.equals("arrived_arv_station")) nextStep();
+            addGerdaSpeechBubble(jsonObject.getString("text"));
+            Handler handler = new Handler();
+            int delay = 5000; //milliseconds
 
-                handler.postDelayed(new Runnable(){
-                    public void run(){
+            handler.postDelayed(new Runnable(){
+            public void run(){
                         listen(USER_ANSWER);
                     }
-                }, delay);
-            }
+            }, delay);
+
         }
     };
 
@@ -422,6 +414,29 @@ public class MainActivity extends AppCompatActivity {
         Polyline line = new Polyline();   //see note below!
         line.setPoints(geoPoints);
         map.getOverlayManager().add(line);
+    }
+
+    public void changeLocationAction(double lat, double lon){
+        GeoPoint point = new GeoPoint(lat,lon);
+        myMarker.setPosition(point);
+        myMarker.setTextLabelBackgroundColor(
+                Color.TRANSPARENT
+        );
+        myMarker.setTextLabelForegroundColor(
+                Color.RED
+        );
+        myMarker.setTextLabelFontSize(40);
+        myMarker.setIcon(getDrawable(R.drawable.smile));
+        myMarker.setImage(getDrawable(R.drawable.smile));
+        //m.setTextIcon("text");
+        myMarker.setAnchor(0.19f, 0.33f);
+        map.getOverlays().add(myMarker);
+        map.invalidate();
+        GeoPoint geoPoint = new GeoPoint(lat, lon);
+        mapController.setCenter(geoPoint);
+        rideCanvas.setUserPos(currentStep.getPercentageOnRoute((float) lat, (float) lon, self));
+        if(geoPointListener!=null)geoPointListener.listen(lat, lon);
+        updateLocation(lat, lon);
     }
 
     public void newMarker(GeoPoint point) {

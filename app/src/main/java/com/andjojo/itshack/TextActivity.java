@@ -54,7 +54,7 @@ public class TextActivity extends AppCompatActivity {
                 getSystemService(Context.LOCATION_SERVICE);
         locationListener = new LocationListener() {
             @Override public void onLocationChanged(Location loc) {
-                currentloc = loc.getLatitude()+","+loc.getLongitude();
+                currentloc = loc.getLatitude()+"_"+loc.getLongitude();
                 if (locSwitch.isChecked())startText.setText(currentloc);
             }
 
@@ -110,9 +110,11 @@ public class TextActivity extends AppCompatActivity {
         GerdaVars.setDestinationAdress(destinationText.getText().toString().replace(" ","_"));
         GerdaVars.setUserId("oma_erna_"+System.currentTimeMillis());
         GerdaVars.setDebug(debugSwitch.isChecked());
+        String var = "0";
+        if (locSwitch.isChecked()) var = "1";
         URL url = null;
         try {
-            url = new URL(GerdaVars.getURL()+"route/user_id="+GerdaVars.getUserId()+",dep_name="+GerdaVars.getStartAdress()+",arr_name="+GerdaVars.getDestinationAdress()+",date_time="+GerdaVars.getStartTime());
+            url = new URL(GerdaVars.getURL()+"route/user_id="+GerdaVars.getUserId()+",dep_name="+GerdaVars.getStartAdress()+",arr_name="+GerdaVars.getDestinationAdress()+",date_time="+GerdaVars.getStartTime()+",dep_is_lat_lon="+var);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -142,9 +144,6 @@ public class TextActivity extends AppCompatActivity {
         GerdaVars.setRoute(jsonRoute);
         Intent intent = new Intent(this, OverviewActivity.class);
         startActivity(intent);
-
-
-
     };
 
 }

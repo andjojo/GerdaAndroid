@@ -24,7 +24,7 @@ public class GeoPointListener {
                 targetlat = step.getStationLats()[maneuvernumber];
                 targetlon = step.getStationLons()[maneuvernumber];
             }
-            else activity.nextStep();
+            //else activity.nextStep();
 
         }
     }
