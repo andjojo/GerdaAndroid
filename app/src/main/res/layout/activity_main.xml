@@ -48,8 +48,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/map" />
 
-    <ImageButton
-        android:id="@+id/button1"
+    <ImageView
+        android:id="@+id/imageView3"
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:layout_marginStart="10dp"
@@ -59,24 +59,26 @@
         android:elevation="5dp"
         android:foregroundGravity="right|center_horizontal"
         android:onClick="onListen"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:srcCompat="@android:drawable/ic_btn_speak_now" />
+        app:srcCompat="@drawable/microphone_solid" />
+
 
     <ScrollView
         android:id="@+id/scrollView"
-        android:layout_width="377dp"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="110dp"
         android:layout_marginEnd="10dp"
-        android:layout_marginBottom="5dp"
         android:fadingEdge="vertical"
-        app:layout_constraintBottom_toTopOf="@id/button1"
+        app:layout_constraintBottom_toTopOf="@+id/imageView3"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/currentstate">
+        app:layout_constraintTop_toTopOf="@+id/currentstate">
 
         <LinearLayout
             android:id="@+id/scrollayout"

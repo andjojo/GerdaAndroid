@@ -6,6 +6,8 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -28,8 +30,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.andjojo.itshack.WebAPI.DownloadFilesTask;
 import com.andjojo.itshack.WebAPI.HandlePHPResult;
@@ -73,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
     Marker myMarker;
     MainActivity self;
     boolean debugLoc = false;
+    String blockedInteractions="";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -253,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
                 getApplicationContext().getPackageName());
-        ImageButton btn = (ImageButton) findViewById(R.id.button1);
+        ImageView btn = (ImageView) findViewById(R.id.imageView3);
         btn.setBackgroundResource(R.drawable.layout_bg_yellow_blue);
         // Add custom listeners.
         CustomRecognitionListener listener = new CustomRecognitionListener(this,currentInteractionId,btn);
@@ -301,7 +306,15 @@ public class MainActivity extends AppCompatActivity {
                 }
 
             });
-        scrollView.fullScroll(View.FOCUS_DOWN);
+        Handler handler = new Handler();
+        int delay = 10; //milliseconds
+
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                scrollView.fullScroll(View.FOCUS_DOWN);
+            }
+        }, delay);
+
     }
 
     public void addUserSpeechBubble(String text) {
@@ -310,7 +323,14 @@ public class MainActivity extends AppCompatActivity {
         ViewGroup vg = (ViewGroup) (frend.getChildAt(frend.getChildCount() - 1));
         TextView tv = (TextView) vg.getChildAt(0);
         tv.setText(text);
-        scrollView.fullScroll(View.FOCUS_DOWN);
+        Handler handler = new Handler();
+        int delay = 10; //milliseconds
+
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                scrollView.fullScroll(View.FOCUS_DOWN);
+            }
+        }, delay);
     }
 
     public void onFake(View v){
@@ -340,7 +360,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public HandlePHPResult handlePHPResult = (s, url) -> {
-        if (GerdaVars.isDebug()) addGerdaSpeechBubble(url.toString()+"\n \n"+s);
+        if (GerdaVars.isDebug()){
+            addGerdaSpeechBubble(url.toString()+"\n \n"+s);
+            if (s.contains("DOCTYPE")){
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("crash", url.toString());
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(getApplicationContext(),"Copied to Clipboard", Toast.LENGTH_SHORT).show();
+            }
+        }
 
         if (url.toString().contains("get_next_step")) {
             JSONObject jsonObject = new JSONObject(s);
@@ -370,8 +398,9 @@ public class MainActivity extends AppCompatActivity {
         else if (url.toString().contains("check_state")){
             JSONObject jsonObject = new JSONObject(s);
             Boolean isInteraction = jsonObject.getBoolean("is_interaction");
-            if (!currentInteractionId.equals(jsonObject.getString("interaction_id"))) {
+            if (!blockedInteractions.contains(jsonObject.getString("interaction_id"))) {
                 currentInteractionId = jsonObject.getString("interaction_id");
+                blockedInteractions = blockedInteractions+jsonObject.getString("interaction_id");
                 if (isInteraction) {
                     addGerdaSpeechBubble(jsonObject.getString("interaction_text"));
                     Handler handler = new Handler();
@@ -389,16 +418,17 @@ public class MainActivity extends AppCompatActivity {
             JSONObject jsonObject = new JSONObject(s);
             currentInteractionId = jsonObject.getString("interaction_id");
             if (currentInteractionId.equals("arrived_arv_station")) nextStep();
-            addGerdaSpeechBubble(jsonObject.getString("text"));
-            Handler handler = new Handler();
-            int delay = 5000; //milliseconds
+            else{
+                addGerdaSpeechBubble(jsonObject.getString("text"));
+                Handler handler = new Handler();
+                int delay = 5000; //milliseconds
 
-            handler.postDelayed(new Runnable(){
-            public void run(){
+                handler.postDelayed(new Runnable(){
+                    public void run(){
                         listen(USER_ANSWER);
                     }
-            }, delay);
-
+                }, delay);
+            }
         }
     };
 
@@ -488,6 +518,7 @@ public class MainActivity extends AppCompatActivity {
         }
         new DownloadFilesTask(url, handlePHPResult).execute("");
         stepNumber++;
+        blockedInteractions = "";
     }
 
 }

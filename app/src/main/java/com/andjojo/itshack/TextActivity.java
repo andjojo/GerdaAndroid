@@ -14,6 +14,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Switch;
@@ -108,7 +109,9 @@ public class TextActivity extends AppCompatActivity {
     public void getNewRoute(View v){
         GerdaVars.setStartAdress(startText.getText().toString().replace(" ","_"));
         GerdaVars.setDestinationAdress(destinationText.getText().toString().replace(" ","_"));
-        GerdaVars.setUserId("oma_erna_"+System.currentTimeMillis());
+        String android_id = Settings.Secure.getString(getApplicationContext().getContentResolver(),Settings.Secure.ANDROID_ID);
+
+        GerdaVars.setUserId(android_id);
         GerdaVars.setDebug(debugSwitch.isChecked());
         String var = "0";
         if (locSwitch.isChecked()) var = "1";

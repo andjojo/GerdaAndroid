@@ -8,6 +8,7 @@ import android.speech.SpeechRecognizer;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 
 import com.andjojo.itshack.WebAPI.DownloadFilesTask;
 
@@ -19,10 +20,10 @@ import java.util.ArrayList;
         private static final String TAG = "RecognitionListener";
         private MainActivity activity;
         private String interactionID;
-        private ImageButton btn;
+        private ImageView btn;
 
 
-        public CustomRecognitionListener(MainActivity activity, String interactionID, ImageButton btn){
+        public CustomRecognitionListener(MainActivity activity, String interactionID, ImageView btn){
             this.activity=activity;
             this.interactionID=interactionID;
             this.btn = btn;
