@@ -51,11 +51,17 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
+                                                <entry key="scalingPercent" value="67" />
                                               </map>
                                             </option>
                                           </PersistentState>
                                         </value>
                                       </entry>
+                                    </map>
+                                  </option>
+                                  <option name="values">
+                                    <map>
+                                      <entry key="foregroundImage" value="$USER_HOME$/Pictures/inkscape/gerdaicon.png" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -95,7 +101,7 @@
                                       <entry key="assetType" value="IMAGE" />
                                       <entry key="cropped" value="true" />
                                       <entry key="iconShape" value="CIRCLE" />
-                                      <entry key="imageAsset" value="$USER_HOME$/Pictures/inkscape/gerda.png" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Pictures/inkscape/gerdaicon.png" />
                                     </map>
                                   </option>
                                 </PersistentState>

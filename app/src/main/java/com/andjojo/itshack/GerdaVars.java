@@ -6,7 +6,7 @@ import org.json.JSONObject;
 
 public class GerdaVars {
 
-    private static String URL="http://3.84.55.152:5001/api/";
+    private static String URL="http://54.173.60.197:5001/api/";
     private static String userId="oma_4";
     private static String startAdress="Hegnach_Aldingerstraße";
     private static String destinationAdress="Hamburg";
@@ -39,6 +39,9 @@ public class GerdaVars {
 
     public static void setStartAdress(String Adress){
         startAdress=Adress;
+    }
+    public static void setStartTime(String Time){
+        startTime=Time;
     }
 
     public static void setDestinationAdress(String Adress){

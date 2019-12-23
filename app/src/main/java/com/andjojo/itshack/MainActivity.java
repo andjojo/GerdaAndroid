@@ -26,6 +26,7 @@ import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -98,6 +99,38 @@ public class MainActivity extends AppCompatActivity {
         //inflate and create the map
         setContentView(R.layout.activity_main);
 
+        ImageView button = (ImageView) findViewById(R.id.imageView3);
+        button.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_DOWN){
+
+                    v.animate()
+                            .scaleXBy(-0.04f)
+                            .scaleYBy(-0.04f)
+                            .setDuration(200)
+                            .withEndAction(new Runnable() {
+                                @Override
+                                public void run() {
+
+
+                                }
+                            });
+                    return true;
+                }
+                if(event.getAction() == MotionEvent.ACTION_UP){
+
+                    v.animate()
+                            .scaleX(1)
+                            .scaleY(1)
+                            .setDuration(200);
+                    onListen(v);
+                    return true;
+                }
+                return false;
+            }
+        });
+
         frend = (ViewGroup) findViewById(R.id.scrollayout);
         map = (MapView) findViewById(R.id.map);
         map.setTileSource(TileSourceFactory.MAPNIK);
@@ -129,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
         nextStep();
         startUpdateTimer();
 
-        addGerdaSpeechBubble("Hallo. Ich bin G.E.R.D.A. deine Begleitung auf der heutigen Fahrt. Ich hoffe du freust dich schon auf unsere Reise. Wenn du Fragen hast dann drücke den Knopf und schieß los!");
+        addGerdaSpeechBubble("Hallo. Ich bin Gerda deine Begleitung auf der heutigen Fahrt. Da ich ein Rotkehlchen kannst du von meinem tollen Orientierungssinn profitieren und wirst ganz sicher ankommen. Ich hoffe du freust dich schon auf unsere Reise. Wenn du Fragen hast dann drücke den Knopf mit dem Mikrophon und schieß los!");
 
 
         locationListener = new LocationListener() {
@@ -259,7 +292,10 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
                 getApplicationContext().getPackageName());
         ImageView btn = (ImageView) findViewById(R.id.imageView3);
+        final int paddingBottom = btn.getPaddingBottom(), paddingLeft = btn.getPaddingLeft();
+        final int paddingRight = btn.getPaddingRight(), paddingTop = btn.getPaddingTop();
         btn.setBackgroundResource(R.drawable.layout_bg_yellow_blue);
+        btn.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
         // Add custom listeners.
         CustomRecognitionListener listener = new CustomRecognitionListener(this,currentInteractionId,btn);
         SpeechRecognizer sr = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
@@ -371,9 +407,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (url.toString().contains("get_next_step")) {
+            blockedInteractions = "";
+            currentInteractionId = "";
             JSONObject jsonObject = new JSONObject(s);
             currentStep = new Step(jsonObject);
                 if (!currentStep.getTransportType().equals("Umstieg")) {
+                    newPolyline(currentStep.getLats(), currentStep.getLons());
                     for (int i = 0; i < currentStep.getStationLats().length; i++) {
                         GeoPoint geoPoint = new GeoPoint(currentStep.getStationLats()[i], currentStep.getStationLons()[i]);
                         if (i == 0) mapController.setCenter(geoPoint);
@@ -388,7 +427,7 @@ public class MainActivity extends AppCompatActivity {
                         geoPointListener = null;
                     }
 
-            newPolyline(currentStep.getLats(), currentStep.getLons());
+
                 }
                 else {
                     //TODO: ADD code for Umstieg
@@ -401,8 +440,8 @@ public class MainActivity extends AppCompatActivity {
             if (!blockedInteractions.contains(jsonObject.getString("interaction_id"))) {
                 currentInteractionId = jsonObject.getString("interaction_id");
                 blockedInteractions = blockedInteractions+jsonObject.getString("interaction_id");
+                addGerdaSpeechBubble(jsonObject.getString("interaction_text"));
                 if (isInteraction) {
-                    addGerdaSpeechBubble(jsonObject.getString("interaction_text"));
                     Handler handler = new Handler();
                     int delay = 5000; //milliseconds
 
@@ -416,18 +455,24 @@ public class MainActivity extends AppCompatActivity {
         }
         else if (url.toString().contains("gerda_interaction")){
             JSONObject jsonObject = new JSONObject(s);
+
             currentInteractionId = jsonObject.getString("interaction_id");
-            if (currentInteractionId.equals("arrived_arv_station")) nextStep();
-            else{
-                addGerdaSpeechBubble(jsonObject.getString("text"));
+            addGerdaSpeechBubble(jsonObject.getString("text"));
+
+            if (!currentInteractionId.equals("none")){
                 Handler handler = new Handler();
                 int delay = 5000; //milliseconds
 
-                handler.postDelayed(new Runnable(){
-                    public void run(){
-                        listen(USER_ANSWER);
-                    }
-                }, delay);
+                if (jsonObject.getString("interaction_id").equals("arrived_arv_station")) {
+                    nextStep();
+                }
+                if (jsonObject.getBoolean("is_interaction")) {
+                    handler.postDelayed(new Runnable() {
+                        public void run() {
+                            listen(USER_ANSWER);
+                        }
+                    }, delay);
+                }
             }
         }
     };
@@ -443,6 +488,7 @@ public class MainActivity extends AppCompatActivity {
         }
         Polyline line = new Polyline();   //see note below!
         line.setPoints(geoPoints);
+        line.setColor(Color.rgb(34,68,89));
         map.getOverlayManager().add(line);
     }
 
@@ -502,7 +548,7 @@ public class MainActivity extends AppCompatActivity {
     public void updateLocation(double lat, double lon){
         URL url = null;
         try {
-            url = new URL("http://3.84.55.152:5001/api/check_state/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",lat="+lat+",lon="+lon+",current_step="+stepNumber);
+            url = new URL(GerdaVars.getURL()+"check_state/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",lat="+lat+",lon="+lon+",current_step="+stepNumber);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -512,13 +558,12 @@ public class MainActivity extends AppCompatActivity {
     public void nextStep(){
         URL url = null;
         try {
-            url = new URL("http://3.84.55.152:5001/api/get_next_step/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+stepNumber);
+            url = new URL(GerdaVars.getURL()+"get_next_step/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+stepNumber);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
         new DownloadFilesTask(url, handlePHPResult).execute("");
         stepNumber++;
-        blockedInteractions = "";
     }
 
 }

@@ -33,6 +33,7 @@ public final class R {
     public static final int btn_radio_to_on_mtrl_dot_group_animation=0x7f010015;
     public static final int btn_radio_to_on_mtrl_ring_outer_animation=0x7f010016;
     public static final int btn_radio_to_on_mtrl_ring_outer_path_animation=0x7f010017;
+    public static final int scale_button=0x7f010018;
   }
   public static final class attr {
     /**

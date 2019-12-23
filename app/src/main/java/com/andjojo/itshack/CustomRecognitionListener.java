@@ -47,11 +47,18 @@ import java.util.ArrayList;
 
         public void onEndOfSpeech() {
             Log.d(TAG, "onEndofSpeech");
+            final int paddingBottom = btn.getPaddingBottom(), paddingLeft = btn.getPaddingLeft();
+            final int paddingRight = btn.getPaddingRight(), paddingTop = btn.getPaddingTop();
             btn.setBackgroundResource(R.drawable.layout_bg_yellow);
+            btn.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
         }
 
         public void onError(int error) {
             Log.e(TAG, "error " + error);
+            final int paddingBottom = btn.getPaddingBottom(), paddingLeft = btn.getPaddingLeft();
+            final int paddingRight = btn.getPaddingRight(), paddingTop = btn.getPaddingTop();
+            btn.setBackgroundResource(R.drawable.layout_bg_yellow);
+            btn.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
         }
 
         public void onResults(Bundle results) {
@@ -63,7 +70,7 @@ import java.util.ArrayList;
             activity.addUserSpeechBubble(text);
             URL url = null;
             try {
-                url = new URL("http://3.84.55.152:5001/api/gerda_interaction/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+activity.stepNumber+",interaction_id="+interactionID+",text="+text);
+                url = new URL(GerdaVars.getURL()+"gerda_interaction/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+activity.stepNumber+",interaction_id="+interactionID+",text="+text);
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }

@@ -15,7 +15,11 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -30,7 +34,12 @@ import org.osmdroid.util.GeoPoint;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.sql.Time;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -53,6 +62,38 @@ public class TextActivity extends AppCompatActivity {
         requestRecordAudioPermission();
         locationManager = (LocationManager)
                 getSystemService(Context.LOCATION_SERVICE);
+
+        Button button = (Button) findViewById(R.id.button2);
+        button.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_DOWN){
+
+                    v.animate()
+                            .scaleXBy(-0.04f)
+                            .scaleYBy(-0.04f)
+                            .setDuration(200)
+                            .withEndAction(new Runnable() {
+                                @Override
+                                public void run() {
+
+
+                                }
+                            });
+                    return true;
+                }
+                if(event.getAction() == MotionEvent.ACTION_UP){
+
+                    v.animate()
+                            .scaleX(1)
+                            .scaleY(1)
+                            .setDuration(200);
+                    getNewRoute(v);
+                    return true;
+                }
+                return false;
+            }
+        });
         locationListener = new LocationListener() {
             @Override public void onLocationChanged(Location loc) {
                 currentloc = loc.getLatitude()+"_"+loc.getLongitude();
@@ -112,6 +153,12 @@ public class TextActivity extends AppCompatActivity {
         String android_id = Settings.Secure.getString(getApplicationContext().getContentResolver(),Settings.Secure.ANDROID_ID);
 
         GerdaVars.setUserId(android_id);
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd---HH:mm:ss", Locale.getDefault());
+        String currentDateandTime = sdf.format(new Date());
+
+
+        GerdaVars.setStartTime(currentDateandTime.replace("---","T"));
         GerdaVars.setDebug(debugSwitch.isChecked());
         String var = "0";
         if (locSwitch.isChecked()) var = "1";

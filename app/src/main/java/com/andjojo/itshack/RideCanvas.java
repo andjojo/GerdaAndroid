@@ -89,10 +89,10 @@ public class RideCanvas extends View {
 
                 canvas.drawLine(startPunkt+0,2*height/3+20,startPunkt+lineWidth,2*height/3+20,RidePaint);
 
-                canvas.drawCircle(startPunkt+lineWidth*UserPos,3*height/3-50,20,RidePaint);
+                //canvas.drawCircle(startPunkt+lineWidth*UserPos,3*height/3-50,20,RidePaint);
                 Bitmap MyBitmap =  BitmapFactory.decodeResource(getResources(), R.drawable.smile);
 
-                canvas.drawBitmap(MyBitmap, null,new Rect((int)(startPunkt+lineWidth*UserPos-60),0,(int)(startPunkt+lineWidth*UserPos+60),100), null);
+                canvas.drawBitmap(MyBitmap, null,new Rect((int)(startPunkt+lineWidth*UserPos-60),(int)(3*height/3-120),(int)(startPunkt+lineWidth*UserPos+60),(int)(3*height/3)), null);
 
                 for (int i=0;i<currentStep.getStationNames().length;i++){
                     canvas.drawCircle(startPunkt+lineWidth*currentStep.getStationPercentage()[i],2*height/3+20,20,RidePaint);
