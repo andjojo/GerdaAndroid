@@ -31,6 +31,7 @@ public class OverviewActivity extends AppCompatActivity {
         overviewCanvas.setSteps(GerdaVars.getSteps());
         overviewCanvas.draw();
         Button button = (Button) findViewById(R.id.button);
+        Button buttonShare = (Button) findViewById(R.id.button3);
         button.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -61,6 +62,36 @@ public class OverviewActivity extends AppCompatActivity {
                 return false;
             }
         });
+        buttonShare.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_DOWN){
+
+                    v.animate()
+                            .scaleXBy(-0.04f)
+                            .scaleYBy(-0.04f)
+                            .setDuration(200)
+                            .withEndAction(new Runnable() {
+                                @Override
+                                public void run() {
+
+
+                                }
+                            });
+                    return true;
+                }
+                if(event.getAction() == MotionEvent.ACTION_UP){
+
+                    v.animate()
+                            .scaleX(1)
+                            .scaleY(1)
+                            .setDuration(200);
+                    onShare(v);
+                    return true;
+                }
+                return false;
+            }
+        });
 
     }
     public void onGo(View v){
@@ -72,6 +103,15 @@ public class OverviewActivity extends AppCompatActivity {
         }
         new DownloadFilesTask(url,handlePHPResult).execute("");
         //TIME TO TRAVEL!
+    }
+    public void onShare(View v){
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Reise Teilen");
+        String shareMessage= "Verfolge mich auf meiner Reise:\n\n";
+        shareMessage = shareMessage + "http://18.232.116.237:3434/?user_id="+ GerdaVars.getUserId()+"&track_id="+GerdaVars.trackId;
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareMessage);
+        startActivity(Intent.createChooser(shareIntent, "Wie teilen?"));
     }
 
     public HandlePHPResult handlePHPResult=(s, url)->{

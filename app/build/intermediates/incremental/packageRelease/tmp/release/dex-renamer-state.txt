@@ -1,0 +1,4 @@
+#Sat Jan 18 15:59:01 CET 2020
+base.0=/Users/andjojo/Documents/Development/G.E.R.D.A./GerdaAndroid/app/build/intermediates/transforms/dexMerger/release/0
+path.0=classes.dex
+renamed.0=classes.dex

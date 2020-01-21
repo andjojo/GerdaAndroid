@@ -6,9 +6,11 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.andjojo.itshack.WebAPI.DownloadFilesTask;
 
@@ -21,12 +23,15 @@ import java.util.ArrayList;
         private MainActivity activity;
         private String interactionID;
         private ImageView btn;
+        private SpeechCanvas sc;
+        private boolean listen = true;
 
 
         public CustomRecognitionListener(MainActivity activity, String interactionID, ImageView btn){
             this.activity=activity;
             this.interactionID=interactionID;
             this.btn = btn;
+            sc = (SpeechCanvas) activity.findViewById(R.id.speech);
         }
 
         public void onReadyForSpeech(Bundle params) {
@@ -38,7 +43,18 @@ import java.util.ArrayList;
         }
 
         public void onRmsChanged(float rmsdB) {
+            Toast.makeText(activity.getApplicationContext(),rmsdB+"",Toast.LENGTH_SHORT);
             Log.d(TAG, "onRmsChanged");
+            sc.onRmsChanged(rmsdB);
+            if (listen){
+                sc.setVisibility(View.VISIBLE);
+                btn.setImageAlpha(0);
+            }
+            else{
+                sc.setVisibility(View.INVISIBLE);
+                btn.setImageAlpha(255);
+            }
+
         }
 
         public void onBufferReceived(byte[] buffer) {
@@ -51,6 +67,8 @@ import java.util.ArrayList;
             final int paddingRight = btn.getPaddingRight(), paddingTop = btn.getPaddingTop();
             btn.setBackgroundResource(R.drawable.layout_bg_yellow);
             btn.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
+            sc.onRmsChanged(0.0f);
+            listen = false;
         }
 
         public void onError(int error) {
@@ -59,6 +77,8 @@ import java.util.ArrayList;
             final int paddingRight = btn.getPaddingRight(), paddingTop = btn.getPaddingTop();
             btn.setBackgroundResource(R.drawable.layout_bg_yellow);
             btn.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
+            sc.onRmsChanged(0.0f);
+            listen = false;
         }
 
         public void onResults(Bundle results) {
@@ -68,13 +88,21 @@ import java.util.ArrayList;
             text += matches.get(0);
             text = text.replace(" ","_");
             activity.addUserSpeechBubble(text);
-            URL url = null;
-            try {
-                url = new URL(GerdaVars.getURL()+"gerda_interaction/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+activity.stepNumber+",interaction_id="+interactionID+",text="+text);
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
+            if (text.contains("debug")||text.contains("Debug")){
+                GerdaVars.debug = !GerdaVars.debug;
+                activity.addGerdaSpeechBubble("Debug Mode: "+GerdaVars.debug.toString(),false);
             }
-            new DownloadFilesTask(url, activity.handlePHPResult).execute("");
+            else {
+                URL url = null;
+                try {
+                    url = new URL(GerdaVars.getURL() + "gerda_interaction/user_id=" + GerdaVars.getUserId() + ",track_id=" + GerdaVars.getTrackId() + ",current_step=" + activity.stepNumber + ",interaction_id=" + interactionID + ",text=" + text);
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+                new DownloadFilesTask(url, activity.handlePHPResult).execute("");
+            }
+            sc.onRmsChanged(0.0f);
+            listen = false;
         }
 
         public void onPartialResults(Bundle partialResults) {

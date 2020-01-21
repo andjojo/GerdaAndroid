@@ -16,11 +16,11 @@ public class GeoPointListener {
     }
 
     public void listen(double lat, double lon){
-        if (GerdaVars.isDebug())activity.addGerdaSpeechBubble(distanceInKmBetweenEarthCoordinates(lat,lon,targetlat,targetlon)+"");
+        if (GerdaVars.isDebug())activity.addGerdaSpeechBubble(distanceInKmBetweenEarthCoordinates(lat,lon,targetlat,targetlon)+"",false);
         if (distanceInKmBetweenEarthCoordinates(lat,lon,targetlat,targetlon)<epsilon){
             maneuvernumber++;
             if(maneuvernumber<step.getStationLats().length) {
-                activity.addGerdaSpeechBubble(step.getCurrentInstruction(maneuvernumber));
+                activity.addGerdaSpeechBubble(step.getCurrentInstruction(maneuvernumber),false);
                 targetlat = step.getStationLats()[maneuvernumber];
                 targetlon = step.getStationLons()[maneuvernumber];
             }

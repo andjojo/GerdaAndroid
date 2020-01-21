@@ -10,6 +10,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -18,17 +19,22 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.media.AudioAttributes;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -66,12 +72,13 @@ public class MainActivity extends AppCompatActivity {
     ViewGroup frend;
     private static int USER_QUESTION = 0;
     private static int USER_ANSWER = 1;
-    TextView textViewZeit;
-    TextView textViewExtra;
+    TextView textViewLeft,textViewLeftDesc;
+    TextView textViewRight,textViewRightDesc;
+    ImageView stepIcon;
     ScrollView scrollView;
     IMapController mapController;
     RideCanvas rideCanvas;
-    Step currentStep;
+    Step currentStep,nextStep;
     int stepNumber=-1;
     GeoPointListener geoPointListener;
     String currentInteractionId = "";
@@ -79,12 +86,24 @@ public class MainActivity extends AppCompatActivity {
     MainActivity self;
     boolean debugLoc = false;
     String blockedInteractions="";
+    boolean textModeStep =true;
+    View StepHintView;
+    View TotalHintView;
+    Boolean backmode = false;
+    Handler updatehandler=null;
+    boolean updated=false;
+    boolean noGPS = false;
+    double lats[] = new double[10];
+    double lons[] = new double[10];
+    long millis[] = new long[10];
+    SharedPreferences sharedPref;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         self = this;
-
+        sharedPref = getApplicationContext().getSharedPreferences("internal", Context.MODE_PRIVATE);
+        stepNumber = (sharedPref.getInt("stepNumber",0)-1);
         //handle permissions first, before map is created. not depicted here
 
         //load/initialize the osmdroid configuration, this can be done
@@ -98,7 +117,11 @@ public class MainActivity extends AppCompatActivity {
 
         //inflate and create the map
         setContentView(R.layout.activity_main);
-
+        rideCanvas = (RideCanvas) findViewById(R.id.ride);
+        TotalHintView = findViewById(R.id.totalstate);
+        StepHintView = findViewById(R.id.currentstate);
+        stepIcon = findViewById(R.id.imageView6);
+        rideCanvas.draw();
         ImageView button = (ImageView) findViewById(R.id.imageView3);
         button.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -145,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
         map.setBuiltInZoomControls(false);
         map.setMultiTouchControls(true);
         mapController = map.getController();
-        mapController.setZoom(16);
+        mapController.setZoom(18);
         myMarker = new Marker(map);
         //GeoPoint startPoint = new GeoPoint(53.551085, 9.993682);
         //mapController.setCenter(startPoint);
@@ -154,20 +177,26 @@ public class MainActivity extends AppCompatActivity {
                 getSystemService(Context.LOCATION_SERVICE);
 
 
-        textViewZeit = (TextView) findViewById(R.id.textViewZeit);
-        textViewExtra = (TextView) findViewById(R.id.textViewExtra);
+        textViewLeft = (TextView) findViewById(R.id.textViewZeit);
+        textViewRight = (TextView) findViewById(R.id.textViewExtra);
+        textViewLeftDesc = (TextView) findViewById(R.id.textViewZeitDesc);
+        textViewRightDesc = (TextView) findViewById(R.id.textViewExtraDesc);
         scrollView = (ScrollView) findViewById(R.id.scrollView);
-
+        textViewRight.setText("Ankunft: " +GerdaVars.getDestinationTime() +" Uhr");
+        textViewRightDesc.setText("Du kommst vorrausichtlich um " +GerdaVars.getDestinationTime() +" Uhr an deinem Ziel in " + GerdaVars.getDestinationAdress() + " an");
 
         nextStep();
         startUpdateTimer();
 
-        addGerdaSpeechBubble("Hallo. Ich bin Gerda deine Begleitung auf der heutigen Fahrt. Da ich ein Rotkehlchen kannst du von meinem tollen Orientierungssinn profitieren und wirst ganz sicher ankommen. Ich hoffe du freust dich schon auf unsere Reise. Wenn du Fragen hast dann drücke den Knopf mit dem Mikrophon und schieß los!");
+        addGerdaSpeechBubble("Hallo. Ich bin Gerda deine Begleitung auf der heutigen Fahrt. Da ich ein Rotkehlchen bin, kannst du von meinem tollen Orientierungssinn profitieren und wirst ganz sicher ankommen. Ich hoffe du freust dich schon auf unsere Reise. Wenn du Fragen hast dann drücke den Knopf mit dem Mikrophon und schieß los!",false);
 
 
         locationListener = new LocationListener() {
             @Override public void onLocationChanged(Location loc) {
                 if (!debugLoc)changeLocationAction(loc.getLatitude(),loc.getLongitude());
+                updated = true;
+
+                noGPS = false;
             }
 
             @Override
@@ -211,8 +240,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        rideCanvas = (RideCanvas) findViewById(R.id.ride);
-        rideCanvas.draw();
+
 
     }
 
@@ -320,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void addGerdaSpeechBubble(String text) {
+    public void addGerdaSpeechBubble(String text,Boolean listenAfterwards) {
         final View view = LayoutInflater.from(getApplicationContext()).inflate(R.layout.speech_bubble_gerda, frend, false);
         frend.addView(view);
         ViewGroup vg = (ViewGroup) (frend.getChildAt(frend.getChildCount() - 1));
@@ -332,16 +360,47 @@ public class MainActivity extends AppCompatActivity {
                     if (status == TextToSpeech.SUCCESS) {
                         //Set<Voice> voiceSet = textToSpeechSystem.getVoices();
                         //Voice voice=null;
-                        Set<String> a = new HashSet<>();
+                        /*Set<String> a = new HashSet<>();
                         a.add("male");
                         Voice v = new Voice("de-ger-x-sfg#male_2-local", new Locale("de", "DE"), 500, 200, true, a);
                         List<TextToSpeech.EngineInfo> e = textToSpeechSystem.getEngines();
-                        textToSpeechSystem.setSpeechRate(0.9f);
-                        if(!GerdaVars.isDebug())textToSpeechSystem.speak(text, TextToSpeech.QUEUE_ADD, null);
+                        textToSpeechSystem.setSpeechRate(0.9f);*/
+                        textToSpeechSystem.setLanguage(Locale.GERMANY);
+                        if(!GerdaVars.isDebug())textToSpeechSystem.speak(text, TextToSpeech.QUEUE_ADD, null,"1");
+                        textToSpeechSystem.setOnUtteranceProgressListener(new UtteranceProgressListener(){
+                            @Override
+                            public void onStart(String utteranceId) {
+                                Log.d("1", "Start v15: " + utteranceId);
+                            }
+                            @Override
+                            public void onError(String utteranceId) {
+                                Log.e("1", "Error v15: " + utteranceId);
+                            }
+                            @Override
+                            public void onDone(String utteranceId) {
+                                Log.d("1", "Completed v15: " + utteranceId);
+                                if (listenAfterwards){
+                                    MainActivity.this.runOnUiThread(new Runnable() {
+
+                                        @Override
+                                        public void run() {
+                                            listen(USER_ANSWER);
+                                        }
+
+                                    });
+
+                                }
+                            }
+
+                        });
+                        if (listenAfterwards&&GerdaVars.isDebug()){
+                            listen(USER_ANSWER);
+                        }
                     }
                 }
 
             });
+
         Handler handler = new Handler();
         int delay = 10; //milliseconds
 
@@ -354,6 +413,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void addUserSpeechBubble(String text) {
+        text = text.replace("_"," ");
+        text = text.substring(0, 1).toUpperCase() + text.substring(1);
         final View view = LayoutInflater.from(getApplicationContext()).inflate(R.layout.speech_bubble_user, frend, false);
         frend.addView(view);
         ViewGroup vg = (ViewGroup) (frend.getChildAt(frend.getChildCount() - 1));
@@ -374,6 +435,55 @@ public class MainActivity extends AppCompatActivity {
             changeLocationAction(currentStep.getNextStationLat(),currentStep.getNextStationLon());
             debugLoc = true;
         }
+    }
+    public void onBackPressed(){
+        if (backmode){
+            sharedPref.edit().clear().commit();
+            super.onBackPressed();
+        }else{
+            addGerdaSpeechBubble("Um wirklich zurück zu gehen drücke noch einmal die Zurücktaste!",false);
+            backmode = true;
+            Handler handler = new Handler();
+            int delay = 5000; //milliseconds
+
+            handler.postDelayed(new Runnable(){
+                public void run(){
+                    //do something
+                    backmode = false;
+                }
+            }, delay);
+
+        }
+
+    }
+
+    public void onChangeView(View v){
+        if (textModeStep){
+            Animation animation = new TranslateAnimation(0, -1500,0, 0);
+            animation.setDuration(1000);
+            v.startAnimation(animation);
+            v.setVisibility(View.INVISIBLE);
+            TotalHintView.setVisibility(View.VISIBLE);
+            Animation animation2 = new TranslateAnimation(1500, 0,0, 0);
+            animation2.setDuration(1000);
+            animation2.setFillAfter(true);
+            TotalHintView.startAnimation(animation2);
+
+        }else{
+
+            Animation animation = new TranslateAnimation(0, 1500,0, 0);
+            animation.setDuration(1000);
+            v.startAnimation(animation);
+            v.setVisibility(View.INVISIBLE);
+            StepHintView.setVisibility(View.VISIBLE);
+            Animation animation2 = new TranslateAnimation(-1500, 0,0, 0);
+            animation2.setDuration(1000);
+            animation2.setFillAfter(true);
+            StepHintView.startAnimation(animation2);
+
+        }
+        textModeStep = !textModeStep;
+
     }
 
     public static double degreesToRadians(double degrees) {
@@ -397,7 +507,7 @@ public class MainActivity extends AppCompatActivity {
 
     public HandlePHPResult handlePHPResult = (s, url) -> {
         if (GerdaVars.isDebug()){
-            addGerdaSpeechBubble(url.toString()+"\n \n"+s);
+            addGerdaSpeechBubble(url.toString()+"\n \n"+s,false);
             if (s.contains("DOCTYPE")){
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
                 ClipData clip = ClipData.newPlainText("crash", url.toString());
@@ -421,11 +531,18 @@ public class MainActivity extends AppCompatActivity {
                         rideCanvas.invalidate();
                     }
                     if (currentStep.getTransportType().equals("Laufen")) {
-                        this.addGerdaSpeechBubble(currentStep.getCurrentInstruction(0));
+                        this.addGerdaSpeechBubble(currentStep.getCurrentInstruction(0),false);
                         geoPointListener = new GeoPointListener(this, currentStep);
+                        stepIcon.setImageResource(R.drawable.walkicon);
+                        setStepFromCurrent();
+                        //textViewLeft.setText("nach " +nextStep.getStationNames()[0]+" laufen. Abfahrt von dort um "+ nextStep.getDepartureTime());
                     } else {
+                        stepIcon.setImageResource(R.drawable.trainicon);
                         geoPointListener = null;
+                        textViewLeft.setText("Ankunft in " +currentStep.getStationNames()[currentStep.getStationNames().length-1]+" um "+currentStep.getArrivalTime());
+                        textViewLeftDesc.setText("Du kommst an deinem nächsten Umstieg " +currentStep.getStationNames()[currentStep.getStationNames().length-1]+" um "+currentStep.getArrivalTime()+ " an");
                     }
+                    if(currentStep.getTransportType().equals("Bus"))stepIcon.setImageResource(R.drawable.busicon);
 
 
                 }
@@ -439,39 +556,20 @@ public class MainActivity extends AppCompatActivity {
             Boolean isInteraction = jsonObject.getBoolean("is_interaction");
             if (!blockedInteractions.contains(jsonObject.getString("interaction_id"))) {
                 currentInteractionId = jsonObject.getString("interaction_id");
-                blockedInteractions = blockedInteractions+jsonObject.getString("interaction_id");
-                addGerdaSpeechBubble(jsonObject.getString("interaction_text"));
-                if (isInteraction) {
-                    Handler handler = new Handler();
-                    int delay = 5000; //milliseconds
-
-                    handler.postDelayed(new Runnable() {
-                        public void run() {
-                            listen(USER_ANSWER);
-                        }
-                    }, delay);
+                if (!jsonObject.getString("interaction_id").contains("new_message")){
+                    blockedInteractions = blockedInteractions+jsonObject.getString("interaction_id");
                 }
+                addGerdaSpeechBubble(jsonObject.getString("interaction_text"),isInteraction);
             }
         }
         else if (url.toString().contains("gerda_interaction")){
             JSONObject jsonObject = new JSONObject(s);
-
-            currentInteractionId = jsonObject.getString("interaction_id");
-            addGerdaSpeechBubble(jsonObject.getString("text"));
+            addGerdaSpeechBubble(jsonObject.getString("text"),jsonObject.getBoolean("is_interaction"));
 
             if (!currentInteractionId.equals("none")){
-                Handler handler = new Handler();
-                int delay = 5000; //milliseconds
-
+                currentInteractionId = jsonObject.getString("interaction_id");
                 if (jsonObject.getString("interaction_id").equals("arrived_arv_station")) {
                     nextStep();
-                }
-                if (jsonObject.getBoolean("is_interaction")) {
-                    handler.postDelayed(new Runnable() {
-                        public void run() {
-                            listen(USER_ANSWER);
-                        }
-                    }, delay);
                 }
             }
         }
@@ -493,6 +591,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void changeLocationAction(double lat, double lon){
+        for (int i =1;i<millis.length;i++){
+            millis[10-i] = millis[9-i];
+            lats[10-i] = lats[9-i];
+            lons[10-i] = lons[9-i];
+        }
+        millis[0] = System.currentTimeMillis();
+        lats[0] = lat;
+        lons[0] = lon;
+
         GeoPoint point = new GeoPoint(lat,lon);
         myMarker.setPosition(point);
         myMarker.setTextLabelBackgroundColor(
@@ -510,7 +617,7 @@ public class MainActivity extends AppCompatActivity {
         map.invalidate();
         GeoPoint geoPoint = new GeoPoint(lat, lon);
         mapController.setCenter(geoPoint);
-        rideCanvas.setUserPos(currentStep.getPercentageOnRoute((float) lat, (float) lon, self));
+        if(currentStep!=null)rideCanvas.setUserPos(currentStep.getPercentageOnRoute((float) lat, (float) lon, self));
         if(geoPointListener!=null)geoPointListener.listen(lat, lon);
         updateLocation(lat, lon);
     }
@@ -534,15 +641,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startUpdateTimer(){
-        Handler handler = new Handler();
-        int delay = 10000; //milliseconds
+            updatehandler = new Handler();
+            int delay = 15000; //milliseconds
+            updated = false;
 
-        handler.postDelayed(new Runnable(){
-            public void run(){
-                //do something
-                handler.postDelayed(this, delay);
-            }
-        }, delay);
+            updatehandler.postDelayed(new Runnable() {
+                public void run() {
+                    //do something
+                    if (!updated && !debugLoc) {
+                        double lat = lats[0];
+                        double lon = lons[0];
+                        if (lats[1]!=0){
+                            lat = lats[0]+(lats[0]-lats[1])/(millis[0]-millis[1])*(System.currentTimeMillis()-millis[0]);
+                            lon = lons[0]+(lons[0]-lons[1])/(millis[0]-millis[1])*(System.currentTimeMillis()-millis[0]);
+
+                            double[] loc = currentStep.getEstimatedLocFrom(lats[0],lons[0],lats[1],lons[1],millis);
+                            changeLocationAction(loc[0],loc[1]);
+                        }
+
+
+                        if(!noGPS){
+                            addGerdaSpeechBubble("Du befindest dich vermutlich unter der Erde, ich kann jetzt nur noch grob sagen wo du bist.",false);
+                        }
+                        noGPS = true;
+                    }
+                    updatehandler.postDelayed(this, delay);
+                    updated=false;
+                }
+            }, delay);
     }
 
     public void updateLocation(double lat, double lon){
@@ -564,6 +690,28 @@ public class MainActivity extends AppCompatActivity {
         }
         new DownloadFilesTask(url, handlePHPResult).execute("");
         stepNumber++;
+        sharedPref.edit().putInt("stepNumber",stepNumber).apply();
     }
+
+    public void setStepFromCurrent(){
+        URL url = null;
+        try {
+            url = new URL(GerdaVars.getURL()+"get_next_step/user_id="+GerdaVars.getUserId()+",track_id="+GerdaVars.getTrackId()+",current_step="+stepNumber);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        new DownloadFilesTask(url, setStep).execute("");
+    }
+
+    public HandlePHPResult setStep = (s, url) -> {
+        nextStep = null;
+        JSONObject j = new JSONObject(s);
+        nextStep = new Step(j);
+        if (currentStep.getTransportType().equals("Laufen")) {
+            textViewLeft.setText("Nach " +nextStep.getStationNames()[0]+" laufen");
+            textViewLeftDesc.setText("Abfahrt von "+nextStep.getStationNames()[0]+" um "+ nextStep.getDepartureTime());
+        }
+    };
+
 
 }

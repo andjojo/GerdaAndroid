@@ -1,4 +1,4 @@
-#Mon Dec 23 17:12:55 CET 2019
+#Tue Jan 21 01:14:12 CET 2020
 base.0=/Users/andjojo/Documents/Development/G.E.R.D.A./GerdaAndroid/app/build/intermediates/transforms/dexMerger/debug/0
 path.1=classes.dex
 renamed.1=classes2.dex

@@ -7,6 +7,7 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -19,8 +20,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.animation.TranslateAnimation;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -47,23 +50,59 @@ public class TextActivity extends AppCompatActivity {
 
     ProgressDialog dialog;
     EditText startText,destinationText;
-    Switch debugSwitch,locSwitch;
+    Switch locSwitch;
     LocationListener locationListener;
     LocationManager locationManager;
+    ImageView imstart,imdest;
+    TextView stateText;
     String currentloc;
+    Button button;
+    int mode = 1;
+    boolean quer=true;
+    SharedPreferences sharedPref;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_text);
         startText=(EditText)findViewById(R.id.editText2);
+        stateText=(TextView) findViewById(R.id.textView2);
+        imstart = (ImageView) findViewById(R.id.imageView2);
+        imdest = (ImageView) findViewById(R.id.imageView5);
         destinationText=(EditText)findViewById(R.id.editText);
-        debugSwitch = (Switch) findViewById(R.id.switch1);
         locSwitch = (Switch) findViewById(R.id.switch2);
         requestRecordAudioPermission();
-        locationManager = (LocationManager)
-                getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        sharedPref = getApplicationContext().getSharedPreferences("internal", Context.MODE_PRIVATE);
+        String track = sharedPref.getString("trackid", "null");
+        if (!track.equals("null")){
+            quer = true;
+            GerdaVars.setStartAdress(startText.getText().toString().replace(" ", "_"));
+            GerdaVars.setDestinationAdress(destinationText.getText().toString().replace(" ", "_"));
+            String android_id = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID);
 
-        Button button = (Button) findViewById(R.id.button2);
+            GerdaVars.setUserId(android_id);
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd---HH:mm:ss", Locale.getDefault());
+            String currentDateandTime = sdf.format(new Date());
+
+
+            GerdaVars.setStartTime(currentDateandTime.replace("---", "T"));
+            String var = "0";
+            if (locSwitch.isChecked()) var = "1";
+            URL url = null;
+            try {
+                url = new URL(GerdaVars.getURL() + "route/user_id=" + GerdaVars.getUserId() + ",dep_name=" + GerdaVars.getStartAdress() + ",arr_name=" + GerdaVars.getDestinationAdress() + ",date_time=" + GerdaVars.getStartTime() + ",dep_is_lat_lon=" + var);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            new DownloadFilesTask(url, handlePHPResult).execute("");
+            dialog = ProgressDialog.show(this, "",
+                    "Route wird geladen...", true);
+        }else{
+            quer = false;
+        }
+
+        button = (Button) findViewById(R.id.button2);
         button.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -147,38 +186,80 @@ public class TextActivity extends AppCompatActivity {
             // permissions this app might request
         }
     }
+    public void onBackPressed(){
+        Animation animation = new TranslateAnimation(-1500, 0,0, 0);
+        animation.setDuration(1000);
+        startText.startAnimation(animation);
+        imstart.startAnimation(animation);
+        locSwitch.startAnimation(animation);
+        imstart.setVisibility(View.VISIBLE);
+        startText.setVisibility(View.VISIBLE);
+        locSwitch.setVisibility(View.VISIBLE);
+        stateText.setText("Von");
+        stateText.startAnimation(animation);
+
+        destinationText.setVisibility(View.INVISIBLE);
+        imdest.setVisibility(View.INVISIBLE);
+        Animation animation2 = new TranslateAnimation(0, 1500,0, 0);
+        animation2.setDuration(1000);
+        animation2.setFillAfter(true);
+        destinationText.startAnimation(animation2);
+        imdest.startAnimation(animation2);
+
+        mode=1;
+    }
     public void getNewRoute(View v){
-        GerdaVars.setStartAdress(startText.getText().toString().replace(" ","_"));
-        GerdaVars.setDestinationAdress(destinationText.getText().toString().replace(" ","_"));
-        String android_id = Settings.Secure.getString(getApplicationContext().getContentResolver(),Settings.Secure.ANDROID_ID);
+        if (mode == 1){
+            Animation animation = new TranslateAnimation(0, -1500,0, 0);
+            animation.setDuration(1000);
+            startText.startAnimation(animation);
+            imstart.startAnimation(animation);
+            locSwitch.startAnimation(animation);
+            imstart.setVisibility(View.INVISIBLE);
+            locSwitch.setVisibility(View.INVISIBLE);
+            startText.setVisibility(View.INVISIBLE);
+            stateText.setText("Nach");
+            button.setText("Weiter");
 
-        GerdaVars.setUserId(android_id);
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd---HH:mm:ss", Locale.getDefault());
-        String currentDateandTime = sdf.format(new Date());
-
-
-        GerdaVars.setStartTime(currentDateandTime.replace("---","T"));
-        GerdaVars.setDebug(debugSwitch.isChecked());
-        String var = "0";
-        if (locSwitch.isChecked()) var = "1";
-        URL url = null;
-        try {
-            url = new URL(GerdaVars.getURL()+"route/user_id="+GerdaVars.getUserId()+",dep_name="+GerdaVars.getStartAdress()+",arr_name="+GerdaVars.getDestinationAdress()+",date_time="+GerdaVars.getStartTime()+",dep_is_lat_lon="+var);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+            destinationText.setVisibility(View.VISIBLE);
+            imdest.setVisibility(View.VISIBLE);
+            Animation animation2 = new TranslateAnimation(1500, 0,0, 0);
+            animation2.setDuration(1000);
+            animation2.setFillAfter(true);
+            destinationText.startAnimation(animation2);
+            imdest.startAnimation(animation2);
+            stateText.startAnimation(animation2);
+            mode=3;
         }
-        new DownloadFilesTask(url,handlePHPResult).execute("");
-        dialog = ProgressDialog.show(this, "",
-                "Route wird geladen...", true);
+        else if (mode==3) {
+            GerdaVars.setStartAdress(startText.getText().toString().replace(" ", "_"));
+            GerdaVars.setDestinationAdress(destinationText.getText().toString().replace(" ", "_"));
+            String android_id = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+
+            GerdaVars.setUserId(android_id);
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd---HH:mm:ss", Locale.getDefault());
+            String currentDateandTime = sdf.format(new Date());
+
+
+            GerdaVars.setStartTime(currentDateandTime.replace("---", "T"));
+            String var = "0";
+            if (locSwitch.isChecked()) var = "1";
+            URL url = null;
+            try {
+                url = new URL(GerdaVars.getURL() + "route/user_id=" + GerdaVars.getUserId() + ",dep_name=" + GerdaVars.getStartAdress() + ",arr_name=" + GerdaVars.getDestinationAdress() + ",date_time=" + GerdaVars.getStartTime() + ",dep_is_lat_lon=" + var);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            new DownloadFilesTask(url, handlePHPResult).execute("");
+            dialog = ProgressDialog.show(this, "",
+                    "Route wird geladen...", true);
+        }
     }
 
     private void requestRecordAudioPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             String requiredPermission = Manifest.permission.RECORD_AUDIO;
-
-            // If the user previously denied this permission then show a message explaining why
-            // this permission is needed
             if (checkCallingOrSelfPermission(requiredPermission) == PackageManager.PERMISSION_DENIED) {
                 requestPermissions(new String[]{requiredPermission}, 101);
             }
@@ -191,9 +272,17 @@ public class TextActivity extends AppCompatActivity {
     public HandlePHPResult handlePHPResult=(s,url)->{
         dialog.dismiss();
         JSONArray jsonRoute = new JSONArray(s);
-        GerdaVars.setRoute(jsonRoute);
-        Intent intent = new Intent(this, OverviewActivity.class);
-        startActivity(intent);
+        if (quer) {
+            GerdaVars.setQuereinstiegRoute(jsonRoute,sharedPref);
+            Intent intent = new Intent(this, MainActivity.class);
+            startActivity(intent);
+        }
+        else {
+            GerdaVars.setRoute(jsonRoute,sharedPref);
+            Intent intent = new Intent(this, OverviewActivity.class);
+            startActivity(intent);
+        }
+
     };
 
 }

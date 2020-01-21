@@ -3,30 +3,47 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
+    android:background="#F2F2F2"
     android:layout_height="match_parent"
     tools:context=".OverviewActivity">
-
 
 
     <Button
         android:id="@+id/button"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="45dp"
         android:layout_marginStart="5dp"
         android:layout_marginEnd="5dp"
         android:layout_marginBottom="5dp"
         android:background="@drawable/layout_bg_yellow"
         android:onClick="onGo"
-        android:text="Und los"
+        android:text="Weiter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
+    <Button
+        android:id="@+id/button3"
+        android:layout_width="fill_parent"
+        android:layout_height="45dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:layout_marginBottom="60dp"
+        android:background="@drawable/layout_bg_yellow"
+        android:onClick="onShare"
+        android:text="Route Teilen"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <com.andjojo.itshack.OverviewCanvas
         android:id="@+id/overview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="393dp"
+        android:layout_height="649dp"
         android:layout_marginTop="50dp"
+        android:layout_marginBottom="28dp"
+        app:layout_constraintBottom_toTopOf="@+id/button3"
         app:layout_constraintTop_toTopOf="parent">
 
     </com.andjojo.itshack.OverviewCanvas>
